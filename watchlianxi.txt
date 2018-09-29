@@ -1,0 +1,309 @@
+
+[root@VM1 ~]# ifconfig |awk '/inet /{print $2}'
+192.168.4.11
+192.168.2.11
+[root@VM1 ~]# route -n |awk '{print $2}'
+IP
+Gateway
+192.168.4.254
+192.168.2.254
+[root@VM1 nginx-1.12.2]# ./configure  --help |egrep 'http_ssl_module|with-stream|with-http_stub_status'
+  --with-http_ssl_module             enable ngx_http_ssl_module
+  --with-http_stub_status_module     enable ngx_http_stub_status_module
+  --with-stream                      enable TCP/UDP proxy module
+  --with-stream=dynamic              enable dynamic TCP/UDP proxy module
+  --with-stream_ssl_module           enable ngx_stream_ssl_module
+  --with-stream_realip_module        enable ngx_stream_realip_module
+  --with-stream_geoip_module         enable ngx_stream_geoip_module
+  --with-stream_geoip_module=dynamic enable dynamic ngx_stream_geoip_module
+  --with-stream_ssl_preread_module   enable ngx_stream_ssl_preread_module
+[root@VM1 nginx-1.12.2]# nginx -V
+nginx version: nginx/1.12.2
+built by gcc 4.8.5 20150623 (Red Hat 4.8.5-16) (GCC) 
+built with OpenSSL 1.0.2k-fips  26 Jan 2017
+TLS SNI support enabled
+configure arguments: --prefix=/usr/local/nginx --user=nginx --group=nginx --with-http_ssl_module --with-stream --with-http_stub_status_module --without-http_autoindex_module --without-http_ssi_module
+
+[root@VM1 ~]# vim /usr/local/nginx/html/index.html
+[root@VM1 ~]# sed -rn  -e  '/<title>|<h1>/p'  -e  '/<h1>/{/VM/p}' /usr/local/nginx/html/index.html
+<title>Welcome to VM1 !</title>
+<h1>Welcome to VM1 192.168.4.11 !</h1>
+<h1>Welcome to VM1 192.168.4.11 !</h1>
+[root@VM1 ~]# sed -rn  -e   '/<h1>/{/VM/p}' /usr/local/nginx/html/index.html<h1>Welcome to VM1 192.168.4.11 !</h1>
+[root@VM1 ~]# sed -rn   '/<h1>/{/VM/p}' /usr/local/nginx/html/index.html
+<h1>Welcome to VM1 192.168.4.11 !</h1>
+
+[root@VM1 ~]# sed -n '/<title>/p' /usr/local/nginx/html/index.html |sed -n \
+> 's/VM1/VM1VM1/p'
+<title>Welcome to VM1VM1 !</title>
+[root@VM1 ~]# sed -n '/<title>/p' /usr/local/nginx/html/index.html 
+<title>Welcome to VM1 !</title>
+
+[root@VM1 ~]# sed -rn   '/<h1>/{/VM/p}' /usr/local/nginx/html/index.html
+<h1>Welcome to VM1 192.168.4.11 !</h1>
+ ///*****精确查找多条件并且替换
+[root@VM1 ~]# sed -ir   '/<h1>/{s/VM1/VM1vm1/}' /usr/local/nginx/html/index.html
+
+[root@VM1 ~]# sed -rn   '/<h1>/{/VM/p}' /usr/local/nginx/html/index.html
+<h1>Welcome to VM1vm1 192.168.4.11 !</h1>
+[root@VM1 ~]# firefox http://192.168.4.12/status
+Active connections: 1 
+server accepts handled requests
+ 9 9 25 
+Reading: 0 Writing: 1 Waiting: 0 
+/**********当VM2 开启数据库代理功能后,还能查看firefox http://192.168.4.12/status
+stream  {
+  upstream mysqls  {
+    server  192.168.2.13:3306;
+    server  192.168.2.14:3306;
+  }
+  server  {
+    listen  3306;
+    proxy_pass  mysqls;
+  }
+}
+************/
+[root@VM1 ~]# firefox http://192.168.4.12/status
+Active connections: 1 
+server accepts handled requests
+ 13 13 43 
+Reading: 0 Writing: 1 Waiting: 0 
+
+
+
+
+
+
+
+[root@VM2 ~]# ifconfig |awk '/inet /{print $2}'
+192.168.4.12
+192.168.2.12
+[root@VM2 ~]# route -n |awk '{print $2}'
+IP
+Gateway
+192.168.4.254
+192.168.2.254
+[root@VM2 ~]# vim /usr/local/nginx/conf/nginx.conf
+ 12 events {
+ 13     worker_connections  65535;
+  14     use  epoll;
+ 15 }
+ 16 stream  {
+ 17   upstream mysqls  {
+ 18     server  192.168.2.13:3306;
+ 19     server  192.168.2.14:3306;
+ 20   }
+ 21   server  {
+ 22     listen  3306;
+ 23     proxy_pass  mysqls;
+ 24   }
+ 25 }
+ 26 http {
+
+ 43     upstream  webs  {
+ 44       server  192.168.2.13:80 weight=1 max_fails=1  fail_timeout=30;
+ 45       server  192.168.2.14:80 weight=2 max_fails=1  fail_timeout=30;
+ 46       server  192.168.2.5  down;
+ 47     }
+ 48     server {
+ 49         listen       80;
+ 50         server_name  localhost;
+ 55       location /status  {
+ 56            stub_status  on;
+ 57            allow  192.168.4.0/24;
+ 58            allow  192.168.2.0/24;
+ 59            deny  all;
+ 60         }
+ 61       location / {
+ 62             proxy_pass  http://webs;
+ 63             root   html;
+ 64             index  index.html index.htm;
+ 65         }
+[root@VM2 ~]# nginx -s reload
+[root@VM2 ~]# sed -n '/<title>/p' /usr/local/nginx/html/index.html 
+<title>Welcome to nginx!</title>
+
+[root@VM2 ~]# sed -i '/<title>/s/nginx/VM2/' /usr/local/nginx/html/index.html
+
+[root@VM2 ~]# sed -n '/<title>/p' /usr/local/nginx/html/index.html 
+<title>Welcome to VM2!</title>
+
+[root@VM2 ~]# sed -i '/<h1>/s/nginx/VM2/' /usr/local/nginx/html/index.html
+[root@VM2 ~]# sed -n '/<h1>/{/VM2/p}' /usr/local/nginx/html/index.html
+<h1>Welcome to VM2!</h1>
+
+
+
+
+
+
+
+
+
+[root@VM3 ~]# ifconfig |awk '/inet /{print $2}'
+192.168.4.13
+192.168.2.13
+[root@VM3 ~]# route -n |awk '{print $2}'
+IP
+Gateway
+192.168.4.254
+192.168.2.254
+[root@VM3 ~]# sed -i '/<title>/s/nginx/VM3/' /usr/local/nginx/html/index.html 
+[root@VM3 ~]# sed -n '/<title>/{/VM3/p}' /usr/local/nginx/html/index.html
+<title>Welcome to VM3!</title>
+[root@VM3 ~]# sed -i '/<h1>/s/nginx/VM3 192.168.2.13/' /usr/local/nginx/html/index.html
+
+[root@VM3 ~]# sed -n '/<h1>/{/VM3/p}' /usr/local/nginx/html/index.html
+<h1>Welcome to VM3 192.168.2.13!</h1>
+ [root@VM3 ~]# grep -n '<h1>' /usr/local/nginx/html/index.html
+14:<h1>Welcome to VM3 192.168.2.13!</h1>
+
+[root@VM3 ~]# vim /usr/local/nginx/conf/nginx.conf
+ 12 events {
+ 13     worker_connections  65535;
+ 14     use  epoll;
+ 15 }
+ 18 http {
+ 36     server {
+ 37         listen       80;
+ 38         server_name  localhost;
+ 39         location  /status  {
+ 40            stub_status  on;
+ 41            allow 192.168.4.0/24;
+ 42            allow  192.168.2.0/24;
+ 43            deny   all;
+ 44         }
+[root@VM3 ~]# nginx -s reload
+[root@VM3 ~]# ss -ntul |egrep ':80|3306|:9000|:11211'
+udp    UNCONN     0      0         *:11211                 *:*                  
+udp    UNCONN     0      0        :::11211                :::*                  
+tcp    LISTEN     0      128       *:11211                 *:*                  
+tcp    LISTEN     0      128       *:80                    *:*                  
+tcp    LISTEN     0      128    127.0.0.1:9000                  *:*                  
+tcp    LISTEN     0      50        *:3306                  *:*                  
+tcp    LISTEN     0      128      :::11211                :::* 
+
+
+
+
+
+
+=====================VM4 ========================
+[root@room9pc01 ~]# ll lnmp.sh 
+[root@room9pc01 ~]# ll /root/桌面/lnmp_soft.tar.gz 
+-rw-r--r-- 1 root root 78844240 9月  25 21:01 /root/桌面/lnmp_soft.tar.gz
+
+[root@room9pc01 ~]# ssh -X 192.168.4.14
+[root@VM4 ~]# ifconfig |awk '/inet /{print $2}'
+192.168.4.14
+192.168.2.14
+[root@VM4 ~]# route -n |awk '{print $2}'
+Gateway
+192.168.4.254
+192.168.2.254
+[root@VM4 ~]# sed -i '/<title>/s/nginx/VM3/' /usr/local/nginx/html/index.html 
+[root@VM4 ~]# sed -i '/<h1>/s/nginx/VM3 192.168.2.14/' /usr/local/nginx/html/index.html
+[root@VM4 ~]# grep -En '<h1>|<title>' /usr/local/nginx/html/index.html
+4:<title>Welcome to VM3!</title>
+14:<h1>Welcome to VM3 192.168.2.14!</h1>
+
+[root@VM4 ~]# vim /usr/local/nginx/conf/nginx.conf
+ 12 events {
+ 13     worker_connections  65535;
+ 14     use  epoll;
+ 15 }
+ 16 
+ 17 
+ 18 http {
+ 36     server {
+ 37         listen       80;
+ 38         server_name  localhost;
+ 39         location  /status  {
+ 40            stub_status  on;
+ 41            allow 192.168.4.0/24;
+ 42            allow  192.168.2.0/24;
+ 43            deny   all;
+ 44         }
+[root@VM4 ~]# nginx -s reload
+------------ss命令可以查看系统中启动的端口信息，该命令常用选项如下：
+-a显示所有端口的信息
+-n以数字格式显示端口号
+-t显示TCP连接的端口
+-u显示UDP连接的端口
+-l显示服务正在监听的端口信息，如httpd启动后，会一直监听80端口
+-p显示监听端口的服务名称是什么（也就是程序名称）
+[root@VM4 ~]# ss -ntul |egrep ':80|:3306|:9000|:11211' |column -t
+udp  UNCONN  0  0    *:11211         *:*
+udp  UNCONN  0  0    *:33064         *:*
+udp  UNCONN  0  0    :::11211        :::*
+tcp  LISTEN  0  128  *:11211         *:*
+tcp  LISTEN  0  128  *:80            *:*
+tcp  LISTEN  0  128  127.0.0.1:9000  *:*
+tcp  LISTEN  0  50   *:3306          *:*
+tcp  LISTEN  0  128  :::11211        :::*
+[root@VM4 ~]# sed -n '75s/^.*/#/' /usr/local/nginx/conf/nginx.conf
+[root@VM4 ~]# echo $?
+0
+[root@VM4 ~]# sed -n '75s/^.*/#/p' /usr/local/nginx/conf/nginx.conf
+#
+[root@VM4 ~]# sed -n  '71,77s/#/*/p' /usr/local/nginx/conf/nginx.conf
+        *location ~ \.php$ {
+        *    root           html;
+        *    fastcgi_pass   127.0.0.1:9000;
+        *    fastcgi_index  index.php;
+        *    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        *    include        fastcgi_params;
+        *}
+[root@VM4 ~]# 
+[root@VM4 ~]# sed -rn  -e  '75s/#/##/p'  -e  '71,77s/(#){1}//p' /usr/local/nginx/conf/nginx.conf
+        location ~ \.php$ {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+        ##    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+            include        fastcgi_params;
+        }
+[root@VM4 ~]# sed -rn  -e  '75s/#/##/p'  /usr/local/nginx/conf/nginx.conf
+        ##    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+[root@VM4 ~]# sed -rn   '71,77s/(#){1}//p' /usr/local/nginx/conf/nginx.conf
+        location ~ \.php$ {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+            fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+            include        fastcgi_params;
+        }
+[root@VM4 ~]# sed -n   '71,77s/(#){1}//p' /usr/local/nginx/conf/nginx.conf
+[root@VM4 ~]# sed -rn   '71,77s/(#){1}//p' /usr/local/nginx/conf/nginx.conf
+        location ~ \.php$ {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+            fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+            include        fastcgi_params;
+        }
+[root@VM4 ~]# sed -rn   '71,77s/#//p' /usr/local/nginx/conf/nginx.conf
+        location ~ \.php$ {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+            fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+            include        fastcgi_params;
+        }
+[root@VM4 ~]# sed -rn  -e  '75s/^/##/p'  /usr/local/nginx/conf/nginx.conf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
