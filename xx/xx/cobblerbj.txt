@@ -1,0 +1,404 @@
+Cobbler装机平台,不同版本的多系统的安装
+
+一  安装一个CentOS虚拟机  
+
+真机: 
+[root@room9pc01 ~]# ls /iso/
+CentOS-7-x86_64-DVD-1708.iso
+
+虚拟机要求:
+             1.硬盘大小50G
+             2.网络类型private1
+             3.软件包选择 "带GUI的服务器"
+             4.分区选择 "自动分区"
+
+             5.将CentOS放入光驱设备,搭建本地Yum仓库
+             6.配置IP地址:192.168.4.168/24
+             7.配置主机名:Cobbler.tedu.cn
+
+二、虚拟机设置  
+   1.设置防火墙为trusted
+  # firewall-cmd  --set-default-zone=trusted 
+
+   2.当前及永久设置SELinux状态为permissive
+ [root@localhost ~]# setenforce 0    #当前临时关闭
+ [root@localhost ~]# getenforce 
+ [root@localhost ~]# vim /etc/selinux/config 
+  SELINUX=permissive
+[root@Cobbler ~]# firewall-cmd --get-default-zone 
+trusted
+[root@Cobbler ~]# getenforce 
+Disabled
+
+
+三、利用scp真机传递Cobbler.zip包到虚拟机192.168.4.168中
+ # scp /root/桌面/Cobbler.zip   root@192.168.4.168:/root/
+ 	
+
+
+##################################################
+重设root密码  
+
+案例1:为虚拟机 server 重设管理密码
+1)重启系统,进入 recovery 恢复模式(修复模式) 
+按e键，找到 linux16 行，末尾添加 rd.break console=tty0
+按 ctrl + x 启动
+2)以可写方式重新挂载 /sysroot,并切换到此环境
+switch_root# mount  -o  remount,rw  /sysroot
+switch_root# chroot  /sysroot    
+sh-3.2#
+3)将root用户的密码设置为 redhat
+# echo  redhat  |  passwd  --stdin  root
+4)重设SELinux安全标签(安全增强版Linux)
+# touch  /.autorelabel    #让  SElinux  失忆
+5)先后执行 exit、reboot 完成修复
+# exit
+# reboot
+
+##################################################
+
+四、搭建Cobbler装机平台
+
+  Cobbler概述软件，管理dhcp、tftp、Web服务
+    自由的导入镜像与ks应答文件
+
+1.解压Cobbler.zip包
+[root@cobbler /]# unzip /root/Cobbler.zip -d /
+[root@cobbler /]# cd /Cobbler/
+[root@cobbler Cobbler]# ls
+
+[root@cobbler /]# unzip /Cobbler/cobbler.zip  -d  /opt/ 
+[root@cobbler /]# ls /opt/cobbler
+
+#####################################################
+五、安装cobbler主程序、工具包等
+[root@cobbler /]# yum -y install /opt/cobbler/*.rpm
+
+################################################################
+cobbler网络装机部署
+
+1.安装软件 cobbler cobbler-web dhcp tftp-server pykickstart httpd  tftp-server 
+
+ cobbler         #cobbler程序包
+ cobbler-web     #cobbler的web服务包
+ pykickstart     #cobbler检查kickstart语法错误
+ httpd           #Apache web服务
+ dhcp            #dhcp服务
+ tftp-server     #tftp服务
+
+
+2.配置cobbler
+[root@svr7 /]# vim  /etc/cobbler/settings
+
+ next_server:   192.168.4.168    #设置下一个服务器还为本机
+ server:   192.168.4.168         #设置本机为cobbler服务器
+ manage_dhcp:   1                #设置cobbler管理dhcp服务
+ pxe_just_once:   1              #防止客户端重复安装操作系统
+
+ 开机启动： 匹配及停止  
+     1.硬盘启动    2.光驱设备     3.U盘     4.网络引导   
+
+      
+
+
+
+
+
+
+3.配置cobbler的dhcp
+[root@svr7 /]# vim  /etc/cobbler/dhcp.template 
+
+
+  :%s  /旧/新/g      #全文替换
+
+  :%s  /192.168.1/192.168.4/g    #全文替换
+
+    5 次替换，共 4 行   
+
+
+
+4.绝对路径解压cobbler_boot.tar.gz    #众多的引导文件
+
+# tar -tf  /Cobbler/cobbler_boot.tar.gz   #查看包里面内容
+# tar -xPf  /Cobbler/cobbler_boot.tar.gz  #绝对路径释放
+
+# ls  /var/lib/cobbler/loaders/
+
+5.启动相关服务
+[root@svr7 /]# systemctl restart cobblerd
+[root@svr7 /]# systemctl enable cobblerd
+
+[root@svr7 /]# systemctl restart httpd
+[root@svr7 /]# systemctl enable httpd
+
+[root@svr7 /]# systemctl restart tftp
+[root@svr7 /]# systemctl enable tftp
+
+[root@svr7 /]# systemctl restart rsyncd   #同步服务
+[root@svr7 /]# systemctl enable rsyncd
+
+
+6.同步刷新cobbler配置
+[root@svr7 /]# cobbler sync
+[root@svr7 /]# firefox https://192.168.4.168/cobbler_web
+
+   用户名：cobbler
+   密码：cobbler
+
+
+##########################################################################################################
+  cobbler import  --path=挂载点   --name=导入系统命名（随意起）
+导入安装镜像数据
+
+# mount /dev/cdrom  /dvd
+
+# ls /dvd/
+
+# cobbler import --path=/dvd  --name=CentOS7
+
+cobbler导入的镜像放在：/var/www/cobbler/ks_mirror
+
+[root@cobbler /]# cobbler list    #查看有哪些系统
+distros:
+   CentOS7-x86_64        #安装客户端至少2G内存
+
+profiles:
+   CentOS7-x86_64
+
+##############################################
+删除
+# cobbler list 
+# cobbler profile remove --name=CentOS7-x86_64  #删除菜单信息
+# cobbler distro remove --name=CentOS7-x86_64  #删除镜像信息
+
+
+###########################################
+
+# umount /dvd/
+# mount /dev/cdrom  /dvd   将光盘换成RHEL7
+# ls /dvd/
+
+  安装完成机器 默认root  密码  cobbler
+
+############################################################################################################
+[root@cobbler ~]# system-config-kickstart  #生成ks文件
+
+必须默认kickstart文件存放位置：/var/lib/cobbler/kickstarts/
+
+[root@cobbler ~]# cobbler list
+
+修改kickstart文件：
+[root@cobbler ~]# cobbler profile edit --name=CentOS7.4-A  --kickstart=/var/lib/cobbler/kickstarts/自定义.cfg
+
+[root@cobbler ~]# cobbler profile report
+[root@cobbler ~]# cobbler sync  #同步配置
+
+############################################################################################################
+
+########################################################
+[root@room11pc13 ~]#ssh-keygen
+[root@room11pc13 ~]# ssh-copy-id root@172.25.0.10
+[root@room11pc13 ~]# eval "$(ssh-agent -s)"
+Agent pid 6262
+[root@room11pc13 ~]# ssh-add 
+Identity added: /root/.ssh/id_rsa (/root/.ssh/id_rsa)
+[root@room11pc13 ~]# ls -l /root/.ssh/id_rsa
+-rw-------. 1 root root 1679 7月  25 17:10 /root/.ssh/id_rsa
+[root@room11pc13 ~]# ssh-copy-id root@172.25.0.10
+[root@room11pc13 ~]# ssh -X root@172.25.0.10
+Last login: Thu Jul 26 08:48:15 2018 from 172.25.0.250
+--------------------------------------------------------------
+[root@Adns ~]# who
+root     pts/0        2018-07-26 08:35 (192.168.4.254)
+[root@Adns ~]# w
+ 09:06:47 up 33 min,  1 user,  load average: 0.00, 0.01, 0.05
+USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+root     pts/0    192.168.4.254    08:35    7.00s  0.10s  0.02s w
+
+[root@Adns ~]# top | head -3
+top - 09:07:23 up 33 min,  1 user,  load average: 0.00, 0.01, 0.05
+Tasks: 110 total,   1 running, 109 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.0 us,  6.2 sy,  0.0 ni, 93.8 id,  0.0 wa,  0.0 hi,  0.0 si,
+[root@Adns ~]# users 
+root
+[root@Adns ~]# last
+last      lastb     lastcomm  lastlog   
+[root@Adns ~]# last
+root     pts/0        192.168.4.254    Thu Jul 26 08:35   still logged in   
+reboot   system boot  3.10.0-693.el7.x Thu Jul 26 08:33 - 09:10  (00:36)    
+root     pts/1        192.168.4.254    Wed Jul 25 15:29 - down   (06:00)
+reboot   system boot  3.10.0-693.el7.x Tue Jan 30 12:24 - 12:35  (00:10)    
+
+wtmp begins Tue Jan 30 12:24:54 2018
+[root@Adns ~]# lastb
+root     ssh:notty    192.168.4.254    Thu Jul 26 08:35 - 08:35  (00:00)    
+root     ssh:notty    192.168.4.254    Wed Jul 25 13:09 - 13:09  (00:00)  
+
+[root@Adns ~]# journalctl  -xe
+7月 26 09:14:05 Adns run-parts(/etc/cron.daily)[2039]: finished man-db.cron
+7月 26 09:14:05 Adns run-parts(/etc/cron.daily)[2041]: starting mlocate
+7月 26 09:14:10 Adns run-parts(/etc/cron.daily)[2050]: finished mlocate
+
+
+[root@Adns ~]# systemctl start httpd
+[root@Adns ~]# systemctl enable httpd
+Created symlink from /etc/systemd/system/multi-user.target.wants/httpd.service to /usr/lib/systemd/system/httpd.service.
+
+[root@Adns ~]# journalctl | grep httpd
+7月 26 09:29:11 Adns httpd[2231]: AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using fe80::bcca:40ec:2ef8:c52a. Set the 'ServerName' directive globally to suppress this message
+
+[root@Adns ~]# journalctl  -u httpd  -p  6
+-- Logs begin at 四 2018-07-26 08:33:35 CST, end at 四 2018-07-26 09:30:01 CST. 
+7月 26 09:29:11 Adns systemd[1]: Starting The Apache HTTP Server...
+7月 26 09:29:11 Adns httpd[2231]: AH00558: httpd: Could not reliably determine t
+7月 26 09:29:11 Adns systemd[1]: Started The Apache HTTP Server.
+=================
+[root@Adns ~]# ls /etc/system
+systemd/            system-release      system-release-cpe
+
+==========================
+[root@Adns ~]# systemctl get-default 
+multi-user.target
+[root@Adns ~]# systemctl set-default graphical.target 
+Removed symlink /etc/systemd/system/default.target.
+Created symlink from /etc/systemd/system/default.target to /usr/lib/systemd/system/graphical.target.
+[root@Adns ~]# systemctl isolate graphical.target 
+[root@Adns ~]# systemctl get-default 
+graphical.target
+=====================================
+[root@Adns ~]# ls /etc/system
+systemd/            system-release      system-release-cpe
+
+[root@Adns ~]# ls /etc/systemd/system
+system/      system.conf  
+[root@Adns ~]# ls /etc/systemd/system
+basic.target.wants
+bluetooth.target.wants
+dbus-org.bluez.service
+dbus-org.fedoraproject.FirewallD1.service
+dbus-org.freedesktop.Avahi.service
+dbus-org.freedesktop.ModemManager1.service
+dbus-org.freedesktop.NetworkManager.service
+dbus-org.freedesktop.nm-dispatcher.service
+default.target
+default.target.wants
+dev-virtio\x2dports-org.qemu.guest_agent.0.device.wants
+display-manager.service
+getty.target.wants
+graphical.target.wants
+multi-user.target.wants
+printer.target.wants
+remote-fs.target.wants
+sockets.target.wants
+spice-vdagentd.target.wants
+sysinit.target.wants
+system-update.target.wants
+vmtoolsd.service.requires
+
+[root@B ~]# systemctl isolate graphical.target
+[root@B ~]# echo $?
+0
+[root@B ~]# systemctl isolate multi-user.target 
+[root@B ~]# echo $?
+0
+--------------================
+[root@Adns ~]# ls /lib/systemd/system/runlevel
+runlevel0.target        runlevel2.target.wants/ runlevel4.target.wants/
+runlevel1.target        runlevel3.target        runlevel5.target
+runlevel1.target.wants/ runlevel3.target.wants/ runlevel5.target.wants/
+runlevel2.target        runlevel4.target        runlevel6.target
+=====================================
+====================================
+[root@Adns ~]# rpm -qc httpd
+/etc/httpd/conf.d/autoindex.conf
+/etc/httpd/conf.d/userdir.conf
+/etc/httpd/conf.d/welcome.conf
+/etc/httpd/conf.modules.d/00-base.conf
+/etc/httpd/conf.modules.d/00-dav.conf
+/etc/httpd/conf.modules.d/00-lua.conf
+/etc/httpd/conf.modules.d/00-mpm.conf
+/etc/httpd/conf.modules.d/00-proxy.conf
+/etc/httpd/conf.modules.d/00-systemd.conf
+/etc/httpd/conf.modules.d/01-cgi.conf
+/etc/httpd/conf/httpd.conf
+
+===============================
+samba  Windows , Linux, 支持挂载 
+//ip地址/共享目录    /挂载点    cifs      defaults,user=xx,pass=xx,multiuser,sec=ntlmssp,_netdev   0   0
+
+LDAP  -------classroom
+ ip地址:/共享目录home/guests/   /挂载点home/guests/  nfs  defaults,_netdev   0   0
+
+nfs    ip地址:/共享目录   /挂载点  nfs  defaults,_netdev   0   0
+
+ftp  支持所有系统  ftp://ip地址/共享目录
+
+tftp  网络装机
+
+#ssh-keygen
+#ssh-copy-id  root@目标IP
+----#eval "$(ssh-agent -s)"
+------#ssh-add
+--------chmod 0600 /root/.ssh/id_ra
+---------#ssh-copy-id  root@对方IP
+#ssh  -X root@对方ip
+#ssh  [-p  7920]    用户名@目标IP地址 ----远程登陆对方终端
+
+http  支持所有系统 http://ip地址/共享目录 可以域名访问
+
+scp   Linu与linux进行较小的文件传输
+ scp [-r] /本机共享目录/wenjian   用户名@目标IP地址:/对方文件目录/可以重命名文件
+scp [-P  7920]  [-r] /本机共享目录/wenjian   用户名@目标IP地址:/对方文件目录/可以重命名文件
+=================================
+[root@desktop0 ~]# which ssh-copy-id 
+/usr/bin/ssh-copy-id
+[root@desktop0 ~]# ssh-keygen
+|    o            |
+|   = + o .       |
+|  . = X S E      |
+|   . = / +       |
+|    . * =        |
+|       .         |
+|                 |
++-----------------+
+[root@desktop0 ~]# /usr/bin/ssh-copy-id  root@172.25.0.11
+
+[root@desktop0 ~]# ssh root@172.25.0.11
+Last login: Thu Jul 26 08:47:45 2018 from 172.25.0.250
+[root@server0 ~]# exit
+登出
+Connection to 172.25.0.11 closed.
+[root@desktop0 ~]# ls /opt
+rh
+[root@server0 ~]# ls /opt
+rh
+[root@desktop0 ~]# which rsync
+/usr/bin/rsync
+[root@desktop0 ~]# mkdir -p /opt/desk/desk2
+[root@desktop0 ~]# ls /opt/
+desk  rh
+[root@desktop0 ~]# /usr/bin/rsync -avz  --delete /opt/ root@172.25.0.11:/opt/
+[root@server0 ~]# ls /opt
+desk  rh
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

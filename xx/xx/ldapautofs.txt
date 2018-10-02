@@ -1,0 +1,266 @@
+[root@server0 ~]# systemctl is-active  sshd
+active
+[root@room11pc13 ~]# systemctl is-active sshd
+active
+[root@server0 ~]# hostnamectl set-hostname server0.example.com
+[root@server0 ~]# hostnamectl set-hostname server0.example.com
+[root@server0 ~]# which hostnamectl 
+/usr/bin/hostnamectl
+
+
+[root@server0 ~]# yum install -y sssd
+[root@server0 ~]# rpm -q sssd
+sssd-1.11.2-65.el7.x86_64
+[root@server0 ~]# getenforce
+Enforcing
+[root@server0 ~]# LANG= authconfig-tui
+authconfig-tui - (c) 1999-2005 Red Hat, Inc.
+    ┌────────────────┤ Authentication Configuration ├─────────────────┐
+    │                                                                 │ 
+    │  User Information        Authentication                         │ 
+    │  [ ] Cache Information   [ ] Use MD5 Passwords                  │ 
+    │  [*] Use LDAP            [*] Use Shadow Passwords               │ 
+    │  [ ] Use NIS             [*] Use LDAP Authentication            │ 
+    │  [ ] Use IPAv2           [ ] Use Kerberos                       │ 
+    │  [ ] Use Winbind         [ ] Use Fingerprint reader             │ 
+    │                          [ ] Use Winbind Authentication         │ 
+    │                          [*] Local authorization is sufficient  │ 
+    │                                                                 │ 
+    │            ┌────────┐                      ┌──────┐             │ 
+    │            │ Cancel │                      │ Next │             │ 
+    │            └────────┘                      └──────┘             │ 
+    │                                                                 │ 
+    │                                                                 │ 
+    └─────────────────────────------------------------------------─────┘ 
+ <Tab                                                                scr
+
+authconfig-tui - (c) 1999-2005 Red Hat, Inc.
+    
+    
+           ┌─────────────────┤ LDAP Settings ├─────────────────┐
+           │                                                   │ 
+           │          [*] Use TLS                              │ 
+           │  Server: ldap://classroom.example.com/___________ │ 
+           │ Base DN: dc=example,dc=com_______________________ │ 
+           │                                                   │ 
+           │         ┌──────┐                  ┌────┐          │ 
+           │         │ Back │                  │ Ok │          │ 
+           │         └──────┘                  └────┘          │ 
+           │                                                   │ 
+           │                                                   │ 
+           └──────────────────────────────────┘
+    
+ <Tab>/<Alt-Tab> between elements   |   <Space> selects   |  <F12> next scr
+
+    
+    
+              ┌────────────────┤ Warning ├─────────────────┐
+              │                                            │ 
+              │ To connect to a LDAP server with TLS       │ 
+              │ protocol enabled you need a CA certificate │ 
+              │ which signed your server's certificate.    │ 
+              │ Copy the certificate in the PEM format to  │ 
+              │ the '/etc/openldap/cacerts' directory.     │ 
+              │ Then press OK.                             │ 
+              │                                            │ 
+              │                  ┌────┐                    │ 
+              │                  │ Ok │                    │ 
+              │                  └────┘                    │ 
+              │                                            │ 
+              │                                            │ 
+              └───────────────────────────────┘ 
+ <Tab>/<Alt-Tab                                              <F12> next scr
+
+[root@server0 ~]# cd  /etc/openldap/cacerts
+[root@server0 cacerts]# ls /etc/openldap/cacerts
+[root@server0 cacerts]# wget http://classroom.example.com/pub/example-ca.crt
+[root@server0 ~]# ls /etc/openldap/cacerts/
+d5912a02.0  example-ca.crt
+[root@server0 ~]# LANG= authconfig-tui   ----再次检查语法是否正确
+
+[root@server0 ~]# systemctl restart sssd
+[root@server0 ~]# systemctl enable  sssd
+[root@server0 ~]# systemctl is-enabled sssd
+enabled
+[root@server0 ~]# id ldapuser0
+uid=1700(ldapuser0) gid=1700(ldapuser0) 组=1700(ldapuser0)
+
+[root@server0 ~]# showmount -e  classroom.example.com 
+Export list for classroom.example.com:
+/home/guests 172.25.0.0/255.255.0.0
+[root@server0 ~]# mkdir /home/guests
+
+[root@server0 ~]# ls /home/guests/
+[root@server0 ~]# mount classroom.example.com:/home/guests /home/guests
+[root@server0 ~]# ls /home/guests/
+ldapuser0   ldapuser11  ldapuser14  ldapuser17  ldapuser2   ldapuser4  ldapuser7
+[root@server0 ~]# umount /home/guests/
+[root@server0 ~]# ls /home/guests/
+
+[root@server0 ~]# yum install -y autofs    ###########
+
+[root@server0 ~]# rpm -q autofs
+autofs-5.0.7-40.el7.x86_64
+
+[root@server0 ~]# vim /etc/auto.
+auto.master    auto.misc      auto.smb       
+auto.master.d/ auto.net       
+[root@server0 ~]# vim /etc/auto.master    ##############
+[root@server0 ~]# head -8 /etc/auto.master | tail -2
+/misc	/etc/auto.misc
+/home/guests/  /etc/auto.guests
+[root@server0 ~]# vim /etc/auto.guests   ##########3
+[root@server0 ~]# cat  /etc/auto.guests
+ldapuser0  -rw  classroom.example.com:/home/guests/ldapuser0
+
+[root@server0 ~]# ls /etc/auto.
+auto.guests    auto.master.d/ auto.net       
+auto.master    auto.misc      auto.smb       
+
+[root@server0 ~]# systemctl start autofs
+[root@server0 ~]# systemctl enable autofs.service 
+[root@server0 ~]# ls /home
+guests  student
+[root@server0 ~]# ls -ld /home
+drwxr-xr-x. 4 root root 33 7月  21 13:23 /home
+
+[root@server0 ~]# ls /home/guests/
+ls: 无法打开目录/home/guests/: 权限不够
+[root@server0 ~]# echo $USER
+root
+[root@server0 ~]# ls -ld /home/guests/
+drwx------. 5 ldapuser0 ldapuser0 104 7月  21 13:39 /home/guests/
+[root@server0 ~]# su  - ldapuser0  -c  'pwd'
+/home/guests/ldapuser0
+[root@server0 ~]# mount | grep ldapuser
+classroom.example.com:/home/guests/ldapuser0 on /home/guests type nfs4 (rw,relatime,vers=4.0,rsize=131072,wsize=131072,namlen=255,hard,proto=tcp,port=0,timeo=600,retrans=2,sec=sys,clientaddr=172.25.0.11,local_lock=none,addr=172.25.254.254)
+[root@server0 ~]# mount | grep ldapuser0
+classroom.example.com:/home/guests/ldapuser0 on /home/guests type nfs4 (rw,relatime,vers=4.0,rsize=131072,wsize=131072,namlen=255,hard,proto=tcp,port=0,timeo=600,retrans=2,sec=sys,clientaddr=172.25.0.11,local_lock=none,addr=172.25.254.254)
+[root@server0 ~]# su - ldapuser0
+上一次登录：六 7月 21 13:42:03 CST 2018pts/1 上
+-bash-4.2$ ls /home
+guests  student
+-bash-4.2$ ls /home/guests/
+ldapuser0
+-bash-4.2$ echo 123 ldapuser0  > /home/guests/ldapuser0/user0.txt
+-bash-4.2$ cat /home/guests/ldapuser0/user0.txt
+123 ldapuser0
+-bash-4.2$ exit
+logout
+[root@server0 ~]# mount | grep ldapuser
+classroom.example.com:/home/guests/ldapuser1 on /home/guests type nfs4 (rw,relatime,vers=4.0,rsize=131072,wsize=131072,namlen=255,hard,proto=tcp,port=0,timeo=600,retrans=2,sec=sys,clientaddr=172.25.0.11,local_lock=none,addr=172.25.254.254)
+
+
+[root@server0 ~]# vim /etc/auto.master
+[root@server0 ~]# mv /etc/longge /etc/auto.guests
+[root@server0 ~]# !sys
+systemctl restart autofs
+[root@server0 ~]# su - ldapuser3
+[ldapuser3@server0 ~]$ exit
+[root@server0 ~]# ls -l /etc/auto.guests 
+-rw-r--r--. 1 root root 236 7月  21 14:37 /etc/auto.guests
+[root@server0 ~]# cat /etc/auto.guests
+ldapuser0 -rw classroom.example.com:/home/guests/ldapuser0
+ldapuser1 -rw classroom.example.com:/home/guests/ldapuser1
+ldapuser2 -rw classroom.example.com:/home/guests/ldapuser2
+ldapuser3 -rw classroom.example.com:/home/guests/ldapuser3
+[root@server0 ~]# su - ldapuser0
+上一次登录：六 7月 21 14:36:46 CST 2018pts/1 上
+[ldapuser0@server0 ~]$ exit
+logout
+[root@server0 ~]# ls -ld /home/guests/
+drwxr-xr-x. 3 root root 0 7月  21 14:48 /home/guests/
+[root@server0 ~]# vim  /etc/auto.master
+[root@server0 ~]# head -14 /etc/auto.master | tail -2
+/home/guests /etc/auto.guests
+/net	-hosts
+
+
+
+[root@server0 ~]# ssh ldapuser0@server0
+
+ldapuser0@server0's password: password
+Last login: Sat Jul 21 14:48:42 2018
+[ldapuser0@server0 ~]$ echo $USER
+ldapuser0
+
+-------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+[root@server0 ~]# yum install -y postfix
+
+[root@server0 ~]# vim /etc/postfix/main.cf 
+318 relayhost = [smtp0.example.com]    ----classroom
+116 inet_interfaces = loopback-only     -----#锁定本机
+100 myorigin = desktop0.example.com   ------
+267 mynetworks = 127.0.0.0/8  [::1]/128  -----#锁定本机
+164 mydestination = null
+165 local_transport =  error:local delivery disabled #####
+
+[root@server0 ~]# systemctl start postfix.service 
+[root@server0 ~]# echo $?
+0
+[root@server0 ~]# echo 'Mail Data.' | mail -s 'Test1' student
+[root@server0 ~]# echo $?
+0
+[root@desktop0 ~]# lab smtp-nullclient setup
+Setting up desktop machine... 
+Setting up dovecot... 
+Generating new dovecot certificate... 
+Setting up postfix... Generating new postfix certificates... 
+Setting up firewall... 
+Setting up user student... 
+Installing httpd to share cert...
+
+[root@desktop0 ~]# mail -u student
+Heirloom Mail version 12.5 7/5/10.  Type ? for help.
+"/var/mail/student": 6 messages 6 new
+>N  1 root                  Sat Jul 21 16:55  21/834   "Test1"
+ N  2 root                  Sat Jul 21 16:55  21/834   "Test1"
+ N  3 root                  Sat Jul 21 16:55  21/834   "Test1"
+ N  4 root                  Sat Jul 21 16:55  21/834   "Test1"
+ N  5 root                  Sat Jul 21 16:55  21/834   "Test1"
+ N  6 root                  Sat Jul 21 18:07  21/834   "Test1"
+& 1
+Message  1:
+
+
+[root@desktopX ~]# systemctl restart iscsid
+//起 iscsid 服务以读取 iqn 名称
+[root@desktopX ~]# iscsiadm -m discovery -t st -p serverX
+//发现磁盘
+[root@desktopX ~]# iscsiadm -m node -L all
+//连接磁盘
+[root@desktopX ~]# vim /var/lib/iscsi/nodes/iqn.2016-02.com.example\:server0/172.25.0.11 3260/default
+node.conn[0].startup = automatic
+//把 manual 改成 automatic
+.. ..
+[root@desktopX ~]# systemctl enable iscsi
+//将 iscsi 服务设开机自启
+[root@desktopX ~]# lsblk
+//确认多出的磁盘,比如/dev/sda
+[root@desktopX ~]# fdisk /dev/sda
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
