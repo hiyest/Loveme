@@ -1,0 +1,364 @@
+[root@My176 ~]# hostname
+My176.121.209.57
+[root@My176 ~]# ifconfig | head -10
+enp1s0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 176.121.209.57  netmask 255.255.255.0  broadcast 176.121.209.255
+        inet6 fe80::cad3:ffff:fe3f:9068  prefixlen 64  scopeid 0x20<link>
+        ether c8:d3:ff:3f:90:68  txqueuelen 1000  (Ethernet)
+        RX packets 198  bytes 20300 (19.8 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 91  bytes 10210 (9.9 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+[root@My176 ~]# touch /root/桌面/dayx.txt
+[root@My176 ~]# gopc207
+root@192.168.4.207's password: 
+Last login: Sat Jun 23 08:48:27 2018 from 192.168.4.254
+[root@pc207 ~]# hostname
+pc207.tedu.cn
+[root@pc207 ~]# ifconfig eth0
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.168.4.207  netmask 255.255.255.0  broadcast 192.168.4.255
+        inet6 fe80::15a:3674:72c7:f05d  prefixlen 64  scopeid 0x20<link>
+        ether 52:54:00:f0:2a:c3  txqueuelen 1000  (Ethernet)
+        RX packets 142  bytes 14798 (14.4 KiB)
+        RX errors 0  dropped 11  overruns 0  frame 0
+        TX packets 80  bytes 11069 (10.8 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+[root@pc207 ~]# cat /etc/yum.repos.d/rhel7.repo
+[development]
+name=rhel7.4
+enabled=1
+gpgcheck=0
+baseurl=ftp://192.168.4.254/rhel7
+[root@pc207 ~]# yum repolist
+已加载插件：langpacks, product-id, search-disabled-repos, subscription-manager
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+源标识                                       源名称                                             状态
+!development                       rhel7.4                                 4,986
+repolist: 4,986
+[root@pc207 ~]# yum -y install dhcp
+已加载插件：langpacks, product-id, search-disabled-repos, subscription-manager
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+development                                                                              | 4.1 kB  00:00:00     
+软件包 12:dhcp-4.2.5-58.el7.x86_64 已安装并且是最新版本
+无须任何处理
+[root@pc207 ~]# vim /etc/dhcp/dhcpd.conf
+[root@pc207 ~]# cat /etc/dhcp/dhcpd.conf
+
+#   see /usr/share/doc/dhcp*/dhcpd.conf.example
+
+subnet 192.168.4.0  netmask 255.255.255.0 {
+  range 192.168.4.100 192.168.4.150;
+  option domain-name-servers 192.168.4.207;
+  option routers 192.168.4.254;
+  default-lease-time 600;
+  max-lease-time 7200;
+  next-server 192.168.4.207;
+ filename "pxelinux.0";
+}
+[root@pc207 ~]# systemctl restart dhcpd
+[root@pc207 ~]# yum -y install tftp-server
+已加载插件：langpacks, product-id, search-disabled-repos, subscription-manager
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+软件包 tftp-server-5.2-13.el7.x86_64 已安装并且是最新版本
+无须任何处理
+[root@pc207 ~]# systemctl restart tftp
+[root@pc207 ~]# rpm -q tftp-server 
+tftp-server-5.2-13.el7.x86_64
+[root@pc207 ~]# ls /var/lib/tftpboot/
+initrd.img  pxelinux.0  pxelinux.cfg  splash.png  vesamenu.c32  vmlinuz
+
+[root@pc207 ~]# yum provides */pxelinux.0
+已加载插件：langpacks, product-id, search-disabled-repos, subscription-manager
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+development/filelists_db                                                                 | 3.4 MB  00:00:00     
+syslinux-4.05-13.el7.x86_64 : Simple kernel loader which boots from a FAT filesystem
+源    ：development
+匹配来源：
+文件名    ：/usr/share/syslinux/pxelinux.0
+
+syslinux-4.05-13.el7.x86_64 : Simple kernel loader which boots from a FAT filesystem
+源    ：@rhel7
+匹配来源：
+文件名    ：/usr/share/syslinux/pxelinux.0
+
+
+
+[root@pc207 ~]# yum -y install syslinux
+已加载插件：langpacks, product-id, search-disabled-repos, subscription-manager
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+软件包 syslinux-4.05-13.el7.x86_64 已安装并且是最新版本
+无须任何处理
+[root@pc207 ~]# rpm -ql syslinux | grep pxelinux.0
+/usr/share/syslinux/gpxelinux.0
+/usr/share/syslinux/pxelinux.0
+[root@pc207 ~]# ls /var/lib/tftpboot/
+initrd.img  pxelinux.0  pxelinux.cfg  splash.png  vesamenu.c32  vmlinuz
+[root@pc207 ~]# ls /var/lib/tftpboot/pxelinux.cfg/
+default
+[root@pc207 ~]# mount /dev/cdrom /mnt
+mount: /dev/sr0 写保护，将以只读方式挂载
+[root@pc207 ~]# ls /mnt/isolinux/
+boot.cat  grub.conf   isolinux.bin  memtest     TRANS.TBL    vesamenu.c32
+boot.msg  initrd.img  isolinux.cfg  splash.png  upgrade.img  vmlinuz
+[root@pc207 ~]# ls /var/lib/tftpboot/pxelinux.cfg/default 
+/var/lib/tftpboot/pxelinux.cfg/default
+[root@pc207 ~]# cp /mnt/isolinux/isolinux.cfg  /var/lib/tftpboot/pxelinux.cfg/default 
+cp：是否覆盖"/var/lib/tftpboot/pxelinux.cfg/default"？ no
+[root@pc207 ~]# vim /var/lib/tftpboot/pxelinux.cfg/default
+[root@pc207 ~]# yum -y install httpd
+已加载插件：langpacks, product-id, search-disabled-repos, subscription-manager
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+软件包 httpd-2.4.6-67.el7.x86_64 已安装并且是最新版本
+无须任何处理
+[root@pc207 ~]# rpm -q httpd
+httpd-2.4.6-67.el7.x86_64
+[root@pc207 ~]# 
+
+
+[root@pc207 ~]# firefox http://192.168.4.207/rhel7
+^C[Child 1848] ###!!! ABORT: Aborting on channel error.: file /builddir/build/BUILD/firefox-52.2.0/firefox-52.2.0esr/ipc/glue/MessageChannel.cpp, line 2152
+[Child 1848] ###!!! ABORT: Aborting on channel error.: file /builddir/build/BUILD/firefox-52.2.0/firefox-52.2.0esr/ipc/glue/MessageChannel.cpp, line 2152
+
+[root@pc207 ~]# mount /dev/cdrom /var/www/html/rhel7/
+mount: /dev/sr0 写保护，将以只读方式挂载
+您在 /var/spool/mail/root 中有新邮件
+[root@pc207 ~]# ls /var/www/html/rhel7/
+addons  EULA              GPL     isolinux  media.repo  repodata                 RPM-GPG-KEY-redhat-release
+EFI     extra_files.json  images  LiveOS    Packages    RPM-GPG-KEY-redhat-beta  TRANS.TBL
+[root@pc207 ~]# !fire
+firefox http://192.168.4.207/rhel7
+^C[Child 3049] ###!!! ABORT: Aborting on channel error.: file /builddir/build/BUILD/firefox-52.2.0/firefox-52.2.0esr/ipc/glue/MessageChannel.cpp, line 2152
+[Child 3049] ###!!! ABORT: Aborting on channel error.: file /builddir/build/BUILD/firefox-52.2.0/firefox-52.2.0esr/ipc/glue/MessageChannel.cpp, line 2152
+
+[root@pc207 ~]# systemctl restart httpd
+您在 /var/spool/mail/root 中有新邮件
+[root@pc207 ~]# systemctl restart httpd
+[root@pc207 ~]# !fire
+firefox http://192.168.4.207/rhel7
+^C[Child 4307] ###!!! ABORT: Aborting on channel error.: file /builddir/build/BUILD/firefox-52.2.0/firefox-52.2.0esr/ipc/glue/MessageChannel.cpp, line 2152
+[Child 4307] ###!!! ABORT: Aborting on channel error.: file /builddir/build/BUILD/firefox-52.2.0/firefox-52.2.0esr/ipc/glue/MessageChannel.cpp, line 2152
+
+[root@pc207 ~]# 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=========================================================================================
+
+GRUB   e
+linux16  rd.break console=tty0
+
+
+系统根默认挂载/sysroot
+#mount  -o  remount,rw  /sysroot
+#chroot /sysroot/
+#echo mima | passwd  --stdin root
+#touch  /.autorelabel
+
+#exit
+#reboot
+
+[root@My176 ~]# cp -r /var/lib/libvirt/images/con
+conf.d/  content/ 
+[root@My176 ~]# cp -r /var/lib/libvirt/images/content/*  /content/
+[root@My176 ~]# systemctl restart nfs
+nfs-blkmap.service   nfs-lock.service     nfs-server.service
+nfs-client.target    nfslock.service      nfs.service
+nfs-config.service   nfs-mountd.service   nfs-utils.service
+nfs-idmapd.service   nfs-rquotad.service  
+nfs-idmap.service    nfs-secure.service   
+[root@My176 ~]# systemctl restart nfs-server.service 
+[root@My176 ~]# 
+
+
+
+network manager command line interface
+nmcli
+team 
+man nmcli-examples
+man 
+
+[root@server0 ~]# vim /etc/ssh/sshd_config
+153 # Example of overriding settings on a per-user basis
+154 #Match User anoncvs
+155 #       X11Forwarding no
+156 #       AllowTcpForwarding no
+157 #       ForceCommand cvs server	
+158 DenyUsers mike@182.22.2.2
+8 DenyUsers mike@182.22.2.2 yonghuming@kehujiip  yonghuming@kehujiip
+159 #AllowUsers yonghu@@11.1.1.1 
+
+[root@server0 ~]# vim /etc/ssh/sshd_config
+[root@server0 ~]# nmcli connection add con-name eth1 ifname wangka type ethernet
+Connection 'eth1' (ff97917e-25e4-4c9d-807c-d3aefe13d397) successfully added.
+[root@server0 ~]# nmcli device status
+设备  类型      状态    CONNECTION  
+eth0  ethernet  连接的  System eth0 
+eth1  ethernet  已断开  --          
+eth2  ethernet  已断开  --          
+lo    loopback  未管理  --          
+[root@server0 ~]# nmcli connection add con-name eth1 ifname eth1 type ethernet
+Connection 'eth1' (420cbc33-0e23-4876-b220-dc7c4aa6b84a) successfully added.
+[root@server0 ~]# nmcli device status
+设备  类型      状态                  CONNECTION  
+eth0  ethernet  连接的                System eth0 
+eth1  ethernet  连接中(获得 IP 配置)  eth1        
+eth2  ethernet  已断开                --          
+lo    loopback  未管理                --          
+[root@server0 ~]# 
+[root@server0 ~]# nmcli connection modify eth1 ipv4.method manual ipv4.addresses 172.25.0.20/24  ipv4.dns 172.25.254.254 ipv4.gateway 172.25.0.254 connection.autoconnect  yes
+Error: invalid property 'gateway': 'gateway' not among [method, dns, dns-search, addresses, address-labels, routes, ignore-auto-routes, ignore-auto-dns, dhcp-client-id, dhcp-send-hostname, dhcp-hostname, never-default, may-fail].
+[root@server0 ~]# 
+
+[root@server0 ~]# ifconfig | head -22
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.25.0.11  netmask 255.255.255.0  broadcast 172.25.0.255
+        inet6 fe80::5054:ff:fe00:b  prefixlen 64  scopeid 0x20<link>
+        ether 52:54:00:00:00:0b  txqueuelen 1000  (Ethernet)
+        RX packets 8718  bytes 10583850 (10.0 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 2664  bytes 323631 (316.0 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet6 fe80::5054:ff:fef8:86c1  prefixlen 64  scopeid 0x20<link>
+        ether 52:54:00:f8:86:c1  txqueuelen 1000  (Ethernet)
+        RX packets 4788  bytes 262320 (256.1 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 15  bytes 2202 (2.1 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth2: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        ether 52:54:00:38:79:d9  txqueuelen 1000  (Ethernet)
+        RX packets 4804  bytes 264864 (258.6 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+[root@server0 ~]# 
+[root@server0 ~]#  nmcli connection add con-name eth1 ifname eth1 type ethernet
+Connection 'eth1' (4a0c173b-f850-4132-9271-4aa4fef96a57) successfully added.
+[root@server0 ~]# nmcli device status
+设备  类型      状态                  CONNECTION  
+eth0  ethernet  连接的                System eth0 
+eth1  ethernet  连接中(获得 IP 配置)  eth1        
+eth2  ethernet  已断开                --          
+lo    loopback  未管理   
+
+[root@server0 ~]# nmcli connection modify eth1 ipv4.method manual ipv4.addresses  '172.25.0.22/24 172.25.0.254' ipv4.dns 172.25.254.254 connection.autoconnect yes
+
+[root@server0 ~]# cat /etc/resolv.conf 
+# Generated by NetworkManager
+domain example.com
+search example.com
+nameserver 172.25.254.254
+[root@server0 ~]# vgdisplay
+
+[root@server0 ~]# nmcli connection up eth1
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/2)
+[root@server0 ~]# ifconfig | head -22
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.25.0.11  netmask 255.255.255.0  broadcast 172.25.0.255
+        inet6 fe80::5054:ff:fe00:b  prefixlen 64  scopeid 0x20<link>
+        ether 52:54:00:00:00:0b  txqueuelen 1000  (Ethernet)
+        RX packets 9797  bytes 10661130 (10.1 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 2984  bytes 358839 (350.4 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.25.0.22  netmask 255.255.255.0  broadcast 172.25.0.255
+        inet6 fe80::5054:ff:fef8:86c1  prefixlen 64  scopeid 0x20<link>
+        ether 52:54:00:f8:86:c1  txqueuelen 1000  (Ethernet)
+        RX packets 5225  bytes 285044 (278.3 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 39  bytes 5843 (5.7 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth2: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        ether 52:54:00:38:79:d9  txqueuelen 1000  (Ethernet)
+        RX packets 5265  bytes 291136 (284.3 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+
+[root@server0 ~]# vgdisplay
+  No volume groups found
+[root@server0 ~]#  vgdisplay juanzuming 
+  Volume group "juanzuming" not found
+  Skipping volume group juanzuming
+[root@server0 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         172.25.0.254    0.0.0.0         UG    1024   0        0 eth0
+172.25.0.0      0.0.0.0         255.255.255.0   U     0      0        0 eth0
+172.25.0.0      0.0.0.0         255.255.255.0   U     0      0        0 eth1
+172.25.253.254  172.25.0.254    255.255.255.255 UGH   1      0        0 eth0
+[root@server0 ~]# nmcli connection show
+名称         UUID                                  类型            设备 
+eth1         420cbc33-0e23-4876-b220-dc7c4aa6b84a  802-3-ethernet  eth1 
+eth1         ff97917e-25e4-4c9d-807c-d3aefe13d397  802-3-ethernet  --   
+System eth0  5fb06bd0-0bb0-7ffb-45f1-d6edd65f3e03  802-3-ethernet  eth0 
+eth1         4a0c173b-f850-4132-9271-4aa4fef96a57  802-3-ethernet  --   
+[root@server0 ~]# nmcli connection --help
+Usage: nmcli connection { COMMAND | help }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

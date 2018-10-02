@@ -1,0 +1,161 @@
+
+全反线 控制设备
+[root@My176 ~]# virsh list
+ Id    名称                         状态
+----------------------------------------------------
+ 1     win2008                        running
+ 3     pc207                          running
+ 4     Cobbler.tedu.cn                running
+ 5     classroom                      running
+ 6     server                         running
+
+[root@My176 ~]# virhs dominfo
+bash: virhs: 未找到命令...
+相似命令是： 'virsh'
+[root@My176 ~]# virsh list
+ Id    名称                         状态
+----------------------------------------------------
+ 1     win2008                        running
+ 3     pc207                          running
+ 4     Cobbler.tedu.cn                running
+ 5     classroom                      running
+ 6     server                         running
+
+[root@My176 ~]# virsh dominfo classroom
+Id:             5
+名称：       classroom
+UUID:           ec59d644-7a13-434b-8915-66b3e24c0861
+OS 类型：    hvm
+状态：       running
+CPU：          1
+CPU 时间：   25.4s
+最大内存： 2049024 KiB
+使用的内存： 1048576 KiB
+持久：       是
+自动启动： 禁用
+管理的保存： 否
+安全性模式： none
+安全性 DOI： 0
+
+[root@My176 ~]# virsh dominfo server
+Id:             6
+名称：       server
+UUID:           d305c1ed-daa4-4f99-8b11-1a6add8513f5
+OS 类型：    hvm
+状态：       running
+CPU：          1
+CPU 时间：   22.5s
+最大内存： 2097152 KiB
+使用的内存： 1048576 KiB
+持久：       是
+自动启动： 禁用
+管理的保存： 否
+安全性模式： none
+安全性 DOI： 0
+
+[root@My176 ~]# virsh poweroff classroom
+错误：未知的命令：'poweroff'
+[root@My176 ~]# virsh shutdown classroom
+域 classroom 被关闭
+
+[root@My176 ~]# virsh shutdown Cobbler.tedu.cn
+域 Cobbler.tedu.cn 被关闭
+
+[root@My176 ~]# virsh list
+ Id    名称                         状态
+----------------------------------------------------
+ 1     win2008                        running
+ 3     pc207                          running
+ 5     classroom                      running
+ 6     server                         running
+
+[root@My176 ~]# virsh shutdown server
+域 server 被关闭
+
+[root@My176 ~]# virsh list
+ Id    名称                         状态
+----------------------------------------------------
+ 1     win2008                        running
+ 3     pc207                          running
+ 5     classroom                      running
+ 6     server                         running
+
+[root@My176 ~]# rht-vmctl poweroff classroom
+域 classroom 被删除
+
+[root@My176 ~]# rht-vmctl poweroff server
+域 server 被删除
+
+[root@My176 ~]# virsh  reboot  pc207
+域 pc207 正在被重新启动
+
+[root@My176 ~]# rirsh start Cob
+bash: rirsh: 未找到命令...
+[root@My176 ~]# virsh start Cob
+域 Cob 已开始
+
+[root@My176 ~]# virsh start desktop
+域 desktop 已开始
+
+[root@My176 ~]# virsh start classroom
+域 classroom 已开始
+
+[root@My176 ~]# rht-vmctl poweroff classroom
+域 classroom 被删除
+
+[root@My176 ~]# virsh shutdown desktop
+域 desktop 被关闭
+
+[root@My176 ~]# rht-vmctl poweroff desktop
+域 desktop 被删除
+
+[root@My176 ~]# virsh destroy pc207
+域 pc207 被删除
+
+[root@My176 ~]# virsh start classroom
+域 classroom 已开始
+
+[root@My176 ~]# virsh shutdown classroom
+域 classroom 被关闭
+
+[root@My176 ~]# virsh destroy classroom
+域 classroom 被删除
+
+[root@My176 ~]# virsh shutdown Cob
+域 Cob 被关闭
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
